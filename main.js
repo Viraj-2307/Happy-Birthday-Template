@@ -1,105 +1,3 @@
-// import * as THREE from 'three';
-// import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
-// import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
-// import gsap from 'gsap';
-
-// // Scene setup
-// const scene = new THREE.Scene();
-// scene.background = new THREE.Color('#FFE4E1');
-
-// const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-// camera.position.set(0, 5, 20);
-
-// const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('canvas') });
-// renderer.setSize(window.innerWidth, window.innerHeight);
-
-// scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-// const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-// directionalLight.position.set(10, 20, 10);
-// scene.add(directionalLight);
-
-// let textMesh, stringMesh;
-// const ceilingY = 15;
-// renderer.shadowMap.enabled = true;
-// directionalLight.castShadow = true;
-// const loader = new FontLoader();
-// loader.load('/fonts/helvetiker_regular.typeface.json', function (font) {
-//     const textGeometry = new TextGeometry('H', {
-//         font: font,
-//         size: 3,
-//         height: 0.5,
-//         curveSegments: 20,
-//         bevelEnabled: true,
-//         bevelThickness: 0.15,
-//         bevelSize: 0.08,
-//         bevelSegments: 10
-//     });
-
-//     textGeometry.computeBoundingBox();
-//     const centerOffset = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
-//     textGeometry.translate(centerOffset, 0, 0);
-
-//     const textureLoader = new THREE.TextureLoader();
-//     const grassTexture = textureLoader.load('/textures/grass.jpg');
-
-//     const material = new THREE.MeshStandardMaterial({
-//         map: grassTexture,
-//         roughness: 0.8,
-//         metalness: 0.1
-//     });
-
-//     textMesh = new THREE.Mesh(textGeometry, material);
-//     scene.add(textMesh);
-
-//     // Initial position
-//     textMesh.position.y = ceilingY;
-
-//     // Create initial placeholder tube string
-//     const curve = new THREE.CatmullRomCurve3([
-//         new THREE.Vector3(-0.1, ceilingY, 0),
-//         new THREE.Vector3(-0.1, textMesh.position.y + 1, 0),
-//     ]);
-
-//     const tubeGeometry = new THREE.TubeGeometry(curve, 20, 0.05, 8, false);
-//     const tubeMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-//     stringMesh = new THREE.Mesh(tubeGeometry, tubeMaterial);
-//     scene.add(stringMesh);
-
-//     // Animate drop
-//     gsap.to(textMesh.position, {
-//         y: 0,
-//         duration: 1.8,
-//         ease: "bounce.out"
-//     });
-// });
-
-// function updateString() {
-//     if (!stringMesh) return;
-
-//     // Swing factor (adds realistic side movement)
-//     const swing = 0.1 * Math.sin(Date.now() * 0.002);
-
-//     // Apply swing to text as well
-//     textMesh.position.x = -0.1 + swing;
-
-//     const curve = new THREE.CatmullRomCurve3([
-//         new THREE.Vector3(-0.1, ceilingY, 0),
-//         new THREE.Vector3(-0.1 + swing, (textMesh.position.y + ceilingY) / 2, 0),
-//         new THREE.Vector3(-0.1 + swing, textMesh.position.y + 1, 0)
-//     ]);
-
-//     stringMesh.geometry.dispose();
-//     stringMesh.geometry = new THREE.TubeGeometry(curve, 20, 0.05, 8, false);
-// }
-
-// function animate() {
-//     requestAnimationFrame(animate);
-//     if (textMesh) updateString();
-//     renderer.render(scene, camera);
-// }
-// animate();
-
-
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
@@ -108,7 +6,7 @@ import SimplexNoise from 'simplex-noise';
 
 // Scene setup
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#FFE4E1');
+scene.background = new THREE.Color("#4CAF50");
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 5, 20);
@@ -129,88 +27,62 @@ const ceilingY = 15;
 const textureLoader = new THREE.TextureLoader();
 const simplex = new SimplexNoise();
 
+
 // Group to move text and branch together
 let textGroup = new THREE.Group();
 scene.add(textGroup);
 
-// Load textures
+// Loading textures
 const barkTexture = textureLoader.load('/textures/bark.jpg', (texture) => {
     texture.encoding = THREE.sRGBEncoding;
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 });
 const grassTexture = textureLoader.load('/textures/grass.jpg');
+const grassBumpTexture = textureLoader.load('/textures/grass-bump.jpg');
+const leafTexture = textureLoader.load('/textures/falling_leaves.webp');
 
-// Load font and build text
-const loader = new FontLoader();
-loader.load('/fonts/helvetiker_regular.typeface.json', function (font) {
-    const textGeometry = new TextGeometry('H', {
-        font: font,
-        size: 3,
-        height: 0.5,
-        curveSegments: 20,
-        bevelEnabled: true,
-        bevelThickness: 0.15,
-        bevelSize: 0.08,
-        bevelSegments: 10
-    });
+// Realistic Ground
+const groundGeo = new THREE.PlaneGeometry(200, 200, 64, 64);
+const groundMat = new THREE.MeshStandardMaterial({ map: grassTexture, bumpMap: grassBumpTexture, bumpScale: 0.4, roughness: 0.9, metalness: 0.1 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
 
-    textGeometry.computeBoundingBox();
-    const centerOffset = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
-    textGeometry.translate(centerOffset, 0, 0);
+// Displace ground for bumps
+const groundPos = ground.geometry.attributes.position;
+for (let i = 0; i < groundPos.count; i++) {
+    const x = groundPos.getX(i);
+    const z = groundPos.getZ(i);
+    const noise = simplex.noise2D(x * 0.1, z * 0.1) * 1.5;
+    groundPos.setY(i, noise);
+}
+groundPos.needsUpdate = true;
+ground.geometry.computeVertexNormals();
 
-    const material = new THREE.MeshStandardMaterial({
-        map: grassTexture,
-        roughness: 0.8,
-        metalness: 0.2
-    });
+function createLeafShape() {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.quadraticCurveTo(0.15, 0.3, 0, 0.6);
+    shape.quadraticCurveTo(-0.15, 0.3, 0, 0);
+    return shape;
+}
 
-    textMesh = new THREE.Mesh(textGeometry, material);
-    textMesh.castShadow = true;
-    textGroup.add(textMesh);
-    textMesh.position.y = 0;  // relative to group
+function createLeafMesh() {
+    const shape = createLeafShape();
+    const geometry = new THREE.ShapeGeometry(shape);
+    const material = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.8, metalness: 0.1, side: THREE.DoubleSide });
 
-    generateProceduralBranch();
-    generateWrappingKnot();
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    return mesh;
+}
 
-    // Animate the whole group
-    textGroup.position.y = ceilingY;
-
-    gsap.fromTo(textGroup.position, 
-        { y: ceilingY }, 
-        { 
-            y: 0,
-            duration: 1.2,
-            ease: "power2.in",
-            onComplete: () => {
-                spawnLeafParticles();  // launch leaves on impact
-                startRealisticWobble();
-            }
-        }
-    );
-
-    // WOBBLE FUNCTION
-    function startRealisticWobble() {
-        const initialX = (Math.random() - 0.5) * 0.4;  // random tilt direction
-        const initialZ = (Math.random() - 0.5) * 0.4;
-
-        gsap.fromTo(textGroup.rotation, 
-            { x: initialX, z: initialZ }, 
-            { 
-                x: 0, z: 0,
-                duration: 2,
-                ease: "elastic.out(1, 0.3)"
-            });
-    }
-
-});
-
-// Spawn leaf particles on impact
-function spawnLeafParticles() {
-    const leafMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, side: THREE.DoubleSide });
+function spawnLeafParticles(position) {
     for (let i = 0; i < 30; i++) {
-        const leaf = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.1), leafMaterial);
-        leaf.position.copy(textGroup.position);
+        const leaf = createLeafMesh();
+        leaf.position.copy(position);
         scene.add(leaf);
 
         const angle = Math.random() * Math.PI * 2;
@@ -226,27 +98,15 @@ function spawnLeafParticles() {
             duration: 0.8,
             ease: "power3.out",
             onComplete: () => {
-                // gravity drop after burst
-                gsap.to(leaf.position, {
-                    y: 0,
-                    duration: 1.2,
-                    ease: "bounce.out"
-                });
+                gsap.to(leaf.position, { y: 0, duration: 1.2, ease: "bounce.out" });
             }
         });
 
-        gsap.to(leaf.rotation, {
-            x: Math.random() * Math.PI,
-            y: Math.random() * Math.PI,
-            z: Math.random() * Math.PI,
-            duration: 2
-        });
+        gsap.to(leaf.rotation, { x: Math.random() * Math.PI, y: Math.random() * Math.PI, z: Math.random() * Math.PI, duration: 2 });
     }
 }
 
-
-// Create procedural branch
-function generateProceduralBranch() {
+function generateProceduralBranch(group) {
     const points = [
         new THREE.Vector3(-0.1, ceilingY, 0),
         new THREE.Vector3(-0.1, ceilingY - 4, 0),
@@ -265,25 +125,20 @@ function generateProceduralBranch() {
     }
     posAttr.needsUpdate = true;
 
-    const material = new THREE.MeshStandardMaterial({
-        map: barkTexture,
-        color: 0x8B4513,  // same as knot color
-        roughness: 0.9,
-        metalness: 0.1
-    });
+    const material = new THREE.MeshStandardMaterial({ map: barkTexture, color: 0x8B4513, roughness: 0.9, metalness: 0.1 });
 
     stringMesh = new THREE.Mesh(geometry, material);
     stringMesh.castShadow = true;
-    textGroup.add(stringMesh);  // important: add to group
+    group.add(stringMesh);
 }
 
-// Create wrapping knot
-function generateWrappingKnot() {
+function generateWrappingKnot(group) {
     const knotPoints = [];
+
     const loops = 3;
     const baseRadius = 0.5;
     const verticalHeight = 2.5;
-    const centerZ = -0.15; 
+    const centerZ = -0.15;
 
     for (let i = 0; i <= 600; i++) {
         const t = i / 600;
@@ -291,7 +146,7 @@ function generateWrappingKnot() {
         const x = baseRadius * Math.cos(angle);
         const y = baseRadius * Math.sin(angle);
         const z = centerZ + (t - 0.5) * verticalHeight;
-        knotPoints.push(new THREE.Vector3(x, y, z));
+        knotPoints.push(new THREE.Vector3(x, y, z));  
     }
 
     const curve = new THREE.CatmullRomCurve3(knotPoints);
@@ -307,25 +162,198 @@ function generateWrappingKnot() {
     }
     posAttr.needsUpdate = true;
 
-    const material = new THREE.MeshStandardMaterial({
-        map: barkTexture,
-        color: 0x8B4513,
-        roughness: 0.9,
-        metalness: 0.1
-    });
+    const material = new THREE.MeshStandardMaterial({ map: barkTexture, color: 0x8B4513, roughness: 0.9, metalness: 0.1 });
 
     knotMesh = new THREE.Mesh(geometry, material);
     knotMesh.castShadow = true;
-
     knotMesh.rotation.z = 1 / 2;
     knotMesh.position.set(0.1, 1.5, 0.1);
-
-    textGroup.add(knotMesh);
+    group.add(knotMesh);
 }
 
-// Animation loop
+function animateAlive(letter) {
+    // Small periodic movement
+    gsap.to(letter.rotation, { 
+        x: Math.sin(Math.random()) * 0.05, 
+        y: Math.sin(Math.random()) * 0.05, 
+        z: Math.sin(Math.random()) * 0.05, 
+        repeat: -1, 
+        yoyo: true, 
+        duration: 2 
+    });
+}
+
+function addWord(text, yPosition) {
+    const loader = new FontLoader();
+
+    loader.load('/fonts/helvetiker_regular.typeface.json', function (font) {
+        const phrase = text;
+        const letterSpacing = 3.5;
+        const startX = -((phrase.replace(/ /g, '').length - 1) * letterSpacing) / 2;
+
+        let letterIndex = 0;
+
+        for (let i = 0; i < phrase.length; i++) {
+            const char = phrase[i];
+            if (char === ' ') continue;
+
+            const textGeometry = new TextGeometry(char, {
+                font: font,
+                size: 3,
+                height: 0.5,
+                curveSegments: 20,
+                bevelEnabled: true,
+                bevelThickness: 0.15,
+                bevelSize: 0.08,
+                bevelSegments: 10
+            });
+
+            textGeometry.computeBoundingBox();
+            const centerOffset = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
+            textGeometry.translate(centerOffset, 0, 0);
+
+            const material = new THREE.MeshStandardMaterial({ 
+                map: grassTexture,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+
+            const singleLetterGroup = new THREE.Group();
+            singleLetterGroup.name = `letter-${char}`; // <- ADD THIS
+            scene.add(singleLetterGroup);
+
+            const text = new THREE.Mesh(textGeometry, material);
+            text.castShadow = true;
+            text.position.y = 0;
+            singleLetterGroup.add(text);
+
+            generateProceduralBranch(singleLetterGroup);
+            generateWrappingKnot(singleLetterGroup);
+            animateAlive(singleLetterGroup);
+
+            singleLetterGroup.position.x = startX + letterIndex * letterSpacing;
+            singleLetterGroup.position.y = ceilingY + yPosition;
+
+            gsap.fromTo(singleLetterGroup.position,
+                { y: ceilingY + yPosition },
+                {
+                    y: yPosition,
+                    duration: 1.2,
+                    delay: letterIndex * 0.2,
+                    ease: "power2.in",
+                    onComplete: () => {
+                        spawnLeafParticles(singleLetterGroup.position);
+                        startRealisticWobble(singleLetterGroup);
+                    }
+                }
+            );
+
+            function startRealisticWobble(group) {
+                const initialX = (Math.random() - 0.5) * 0.4;
+                const initialZ = (Math.random() - 0.5) * 0.4;
+
+                gsap.fromTo(group.rotation,
+                    { x: initialX, z: initialZ },
+                    { x: 0, z: 0, duration: 2, ease: "elastic.out(1, 0.3)" }
+                );
+            }
+            letterIndex++;
+        }
+    });
+}
+
+function cutAndRelocateLetters(text, lettersToDrop, delay = 5) {
+    lettersToDrop.forEach((letter, idx) => {
+        const group = scene.getObjectByName(`letter-${letter.toUpperCase()}`);
+
+        if (group) {
+            // find nearby birthday
+            const birthdayLetters = scene.children.filter((child) =>
+                child.name.startsWith("letter-") &&
+                "BIRTHDAY".includes(child.name.split("-")[1]) &&
+                child !== group
+            );
+
+            if (birthdayLetters.length > 0) {
+                const target = birthdayLetters[Math.floor(Math.random() * birthdayLetters.length)];
+
+                // move toward birthday instead of downward drop
+                gsap.to(group.position, {
+                    x: target.position.x + (Math.random() - 0.5) * 1,
+                    y: target.position.y,
+                    z: target.position.z + (Math.random() - 0.5) * 1,
+                    duration: 2,
+                    delay: delay + idx * 0.5,
+                    ease: "power2.inOut",
+                    onStart: () => {
+                        // adding a little spin during move
+                        gsap.to(group.rotation, { 
+                            x: Math.random() * Math.PI, 
+                            y: Math.random() * Math.PI, 
+                            z: Math.random() * Math.PI, 
+                            duration: 2, 
+                            ease: "power2.inOut" 
+                        });
+                    }
+                });
+            }
+        }
+    });
+}
+
+
+// Untie knots
+function untieKnots(letters, delay = 0) {
+    letters.forEach((letter, idx) => {
+        const group = scene.getObjectByName(`letter-${letter.toUpperCase()}`);
+
+        if (group) {
+            const knot = group.children.find((child) => child.geometry && child.geometry.attributes?.position?.count > 500);
+            if (knot) {
+                // Animate knot upward and fade it
+                gsap.to(knot.position, { 
+                    y: knot.position.y + 2, 
+                    duration: 1.5, 
+                    delay: delay + idx * 0.5, 
+                    ease: "power2.out",
+                    onComplete: () => {
+                        group.remove(knot);
+                        knot.geometry.dispose();
+                        knot.material.dispose();
+                    }
+                });
+
+                // Fade material
+                gsap.to(knot.material, { 
+                    opacity: 0, 
+                    duration: 1.5, 
+                    delay: delay + idx * 0.5,
+                    ease: "power2.out",
+                    onStart: () => { knot.material.transparent = true }
+                });
+            }
+        }
+    });
+}
+
+// cut A and Y
+setTimeout(function(){
+    // 1. Untie first
+    untieKnots(['A', 'Y'], 2);
+    
+    // 2. After untying, cut and move letters
+    cutAndRelocateLetters("HAPPY", ['A', 'Y'], 4);
+}, 4000);
+
+
 function animate() {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
 }
+
 animate();
+
+
+// Finally, add both words to the scene:
+addWord("HAPPY", 5);
+addWord("BIRTHDAY", 0);
